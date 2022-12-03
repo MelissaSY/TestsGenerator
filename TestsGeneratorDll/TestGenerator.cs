@@ -5,7 +5,7 @@ using System.Threading.Tasks.Dataflow;
 
 namespace TestsGeneratorDll
 {
-    public class Generator
+    public class TestGenerator
     {
         public Task<List<TestClass>> Generate(string sourceCode)
         {
