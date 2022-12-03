@@ -9,13 +9,11 @@ namespace TestsGeneratorDll
     public class TestClass
     {
         public string ClassName { get; }
-        public string Namespace { get; }
         public string Content { get; }
-        public TestClass(string className, string content, string @namespace)
+        public TestClass(string className, string content)
         {
             ClassName = className;
             Content = content;
-            Namespace = @namespace;
         }
     }
 }

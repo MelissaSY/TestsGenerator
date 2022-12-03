@@ -82,13 +82,9 @@ namespace TestsGeneratorApp
         /// <returns>List of processed files</returns>
         public async Task<List<string>> StartProccess(List<string> sourceFilePaths, string resultDir)
         {
-            var readingOptions = new ExecutionDataflowBlockOptions();
-            var writingOptions = new ExecutionDataflowBlockOptions();
-            var generatorOptions = new ExecutionDataflowBlockOptions();
-
-            readingOptions.MaxDegreeOfParallelism = MaxNumReadingFiles;
-            writingOptions.MaxDegreeOfParallelism = MaxNumWritingFiles;
-            generatorOptions.MaxDegreeOfParallelism = MaxNumProessingTasks;
+            var readingOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxNumReadingFiles };
+            var writingOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxNumWritingFiles };
+            var generatorOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxNumProessingTasks };
 
             List<string> filesToProcess = new List<string>();
 
@@ -103,8 +99,6 @@ namespace TestsGeneratorApp
                     filesToProcess.Add(sourceFilePath);
                 }
             }
-
-            List<string> resultPathes = new List<string>();
 
             var readFile = new TransformBlock<string, string>(async filePath =>
             await _fileReader.ReadAsync(filePath), readingOptions);
@@ -128,21 +122,22 @@ namespace TestsGeneratorApp
 
             await writeFile.Completion;
 
-            return resultPathes;
+            return filesToProcess;
         }
 
         private async Task<Dictionary<string, string>> ComposeResultTestFiles(string sourceContent, string resultDir)
         {
             Dictionary<string, string> pathContent = new Dictionary<string, string>();
             List<TestClass> testClasses = await TestGenerator.Generate(sourceContent);
-            string filePath = string.Empty;
+            string filePath;
             foreach (var test in testClasses)
             {
-                filePath = Path.Combine(resultDir, test.ClassName);
+                filePath = Path.Combine(resultDir, test.ClassName + "Tests");
                 while(pathContent.ContainsKey(filePath + ".cs"))
                 {
                     filePath = $"{filePath}_1";
                 }
+                filePath += ".cs";
                 pathContent.Add(filePath, test.Content);
             }
             return pathContent;

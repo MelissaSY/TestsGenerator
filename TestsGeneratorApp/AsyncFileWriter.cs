@@ -10,6 +10,10 @@ namespace TestsGeneratorApp
     {
         public async Task WriteAsync(string filePath, string content)
         {
+            if(!File.Exists(filePath))
+            {
+                File.Create(filePath);
+            }
             using (StreamWriter writer = new StreamWriter(filePath))
             {
                await writer.WriteAsync(content);
