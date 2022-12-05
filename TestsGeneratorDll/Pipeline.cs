@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using TestsGeneratorDll;
 using System.Threading.Tasks.Dataflow;
+using System.IO;
 
-namespace TestsGeneratorApp
+namespace TestsGeneratorDll
 {
     public class IOGeneratorPipeline
     {
@@ -68,12 +69,14 @@ namespace TestsGeneratorApp
             _fileReader = new AsyncFileReader();
             _fileWriter = new AsyncFileWriter();
 
-            TestGenerator= new TestGenerator();
+            TestGenerator = new TestGenerator();
         }
         public IOGeneratorPipeline():this(10, 10, 10)
         {
 
         }
+
+
         /// <summary>
         /// 
         /// </summary>
@@ -103,8 +106,8 @@ namespace TestsGeneratorApp
             var readFile = new TransformBlock<string, string>(async filePath =>
             await _fileReader.ReadAsync(filePath), readingOptions);
 
-            var generateTest = new TransformManyBlock<string, KeyValuePair<string, string>>(async sourceFile =>
-            await ComposeResultTestFiles(sourceFile, resultDir), generatorOptions);
+            var generateTest = new TransformManyBlock<string, KeyValuePair<string, string>>(sourceFile =>
+            ComposeResultTestFiles(sourceFile, resultDir), generatorOptions);
 
             var writeFile = new ActionBlock<KeyValuePair<string, string>>(async pathContent =>
             await _fileWriter.WriteAsync(pathContent.Key, pathContent.Value), writingOptions);
@@ -124,16 +127,25 @@ namespace TestsGeneratorApp
 
             return filesToProcess;
         }
-
-        private async Task<Dictionary<string, string>> ComposeResultTestFiles(string sourceContent, string resultDir)
+        public async Task<List<string>> StartProccess(string dirPath, string resultDir)
+        {
+            List<string> filePathes = new List<string>();
+            var files = Directory.GetFiles(dirPath, "*.cs");
+            if (files != null)
+            {
+                filePathes.AddRange(files);
+            }
+            return await StartProccess(filePathes, resultDir);
+        }
+        private Dictionary<string, string> ComposeResultTestFiles(string sourceContent, string resultDir)
         {
             Dictionary<string, string> pathContent = new Dictionary<string, string>();
-            List<TestClass> testClasses = await TestGenerator.Generate(sourceContent);
+            List<TestClass> testClasses = TestGenerator.Generate(sourceContent);
             string filePath;
             foreach (var test in testClasses)
             {
                 filePath = Path.Combine(resultDir, test.ClassName + "Tests");
-                while(pathContent.ContainsKey(filePath + ".cs"))
+                while (pathContent.ContainsKey(filePath + ".cs"))
                 {
                     filePath = $"{filePath}_1";
                 }
