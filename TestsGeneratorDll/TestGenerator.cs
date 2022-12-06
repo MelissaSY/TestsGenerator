@@ -29,7 +29,7 @@ namespace TestsGeneratorDll
                 //adding setup method
                 CreateSetUpMethod(member.Key, ref classDeclaration);
 
-                classDeclaration = classDeclaration.AddMembers(GenerateTestMethods(member.Value, classDeclaration).ToArray());
+                classDeclaration = classDeclaration.AddMembers(GenerateTestMethods(member.Value, sourceClassName).ToArray());
                 @namespace = @namespace.AddMembers(classDeclaration);
                 testClass = testClass.AddMembers(@namespace);
 
@@ -52,12 +52,12 @@ namespace TestsGeneratorDll
 
             return namespaceName;
         }
-        public List<MethodDeclarationSyntax> GenerateTestMethods(List<MethodDeclarationSyntax> sourceMethods, ClassDeclarationSyntax classDeclarationSyntax)
+        public List<MethodDeclarationSyntax> GenerateTestMethods(List<MethodDeclarationSyntax> sourceMethods, string sourceClassName)
         {
             List<MethodDeclarationSyntax> methods = new List<MethodDeclarationSyntax>();
             List<string> methodNames = new List<string>();
 
-            string sourceClassName = classDeclarationSyntax.Identifier.Text;
+            //string sourceClassName = classDeclarationSyntax.Identifier.Text;
             string initChar = sourceClassName[0].ToString().ToLower();
             string className = sourceClassName.Remove(0, 1);
             className = $"_{initChar}{className}UnderTest";
