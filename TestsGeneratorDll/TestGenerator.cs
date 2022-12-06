@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 
 namespace TestsGeneratorDll
 {
@@ -57,7 +58,7 @@ namespace TestsGeneratorDll
             List<MethodDeclarationSyntax> methods = new List<MethodDeclarationSyntax>();
             List<string> methodNames = new List<string>();
 
-            //string sourceClassName = classDeclarationSyntax.Identifier.Text;
+
             string initChar = sourceClassName[0].ToString().ToLower();
             string className = sourceClassName.Remove(0, 1);
             className = $"_{initChar}{className}UnderTest";
@@ -96,8 +97,7 @@ namespace TestsGeneratorDll
                         varName = $"_{initChar}{varName}";
                         
                         var typeString = type.ToString();
-
-                        arguments = arguments.Add(SyntaxFactory.Argument(SyntaxFactory.IdentifierName(varName)));
+                        var argument = SyntaxFactory.Argument(SyntaxFactory.IdentifierName(varName));
 
                         if (typeString[0].Equals('I') && typeString[1].ToString().ToUpper().Equals(typeString[1].ToString().ToUpper()))
                         {
@@ -115,21 +115,20 @@ namespace TestsGeneratorDll
                                     SyntaxFactory.SingletonSeparatedList(
                                     SyntaxFactory.VariableDeclarator(varName)
                                 .WithInitializer(
-                                    SyntaxFactory.EqualsValueClause(
-                                        SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression,
-                                        SyntaxFactory.Token(SyntaxKind.DefaultKeyword))
-                                        ))))));
-
-                            methodDeclaration = methodDeclaration.AddBodyStatements(
-                                SyntaxFactory.ExpressionStatement(
-                                    SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                                    SyntaxFactory.IdentifierName(varName),
-                                    SyntaxFactory.ObjectCreationExpression(mockName)
+                                    SyntaxFactory.EqualsValueClause(SyntaxFactory.ObjectCreationExpression(mockName)
                                     .WithArgumentList(
-                                        SyntaxFactory.ArgumentList()))));
+                                        SyntaxFactory.ArgumentList())))))));
+
+
+
+                            argument = SyntaxFactory.Argument(
+                                SyntaxFactory.MemberAccessExpression(
+                                    SyntaxKind.SimpleMemberAccessExpression,
+                               SyntaxFactory.IdentifierName(varName), SyntaxFactory.IdentifierName("Object")));
                         }
                         else
                         {
+                            var expr = GetDefault(type.ToString());
                             methodDeclaration = methodDeclaration.AddBodyStatements(
                                SyntaxFactory.LocalDeclarationStatement(
                                SyntaxFactory.VariableDeclaration(type)
@@ -137,11 +136,9 @@ namespace TestsGeneratorDll
                                    SyntaxFactory.SingletonSeparatedList(
                                    SyntaxFactory.VariableDeclarator(varName)
                                .WithInitializer(
-                                   SyntaxFactory.EqualsValueClause(
-                                       SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression,
-                                       SyntaxFactory.Token(SyntaxKind.DefaultKeyword))
-                                       ))))));
+                                   SyntaxFactory.EqualsValueClause(expr))))));
                         }
+                        arguments = arguments.Add(argument);
                     }
                 }
                 if (!returnType.ToString().Equals("void"))
@@ -164,6 +161,8 @@ namespace TestsGeneratorDll
                                                 ))))));
 
 
+
+                    var expr = GetDefault(returnType.ToString());
                     methodDeclaration = methodDeclaration.AddBodyStatements(
                                SyntaxFactory.LocalDeclarationStatement(
                                SyntaxFactory.VariableDeclaration(returnType)
@@ -173,9 +172,7 @@ namespace TestsGeneratorDll
                                            SyntaxFactory.Identifier("expected"))
                                .WithInitializer(
                                    SyntaxFactory.EqualsValueClause(
-                                       SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression,
-                                       SyntaxFactory.Token(SyntaxKind.DefaultKeyword))
-                                       ))))));
+                                       expr))))));
 
 
                     var IsEqualArg = SyntaxFactory.Argument(
@@ -261,7 +258,7 @@ namespace TestsGeneratorDll
                     SyntaxFactory.IdentifierName(
                         sourceClassName))
                        .WithArgumentList(
-                           SyntaxFactory.ArgumentList()); ;
+                           SyntaxFactory.ArgumentList());
 
             if (constructorDeclarations != null)
             {
@@ -322,11 +319,12 @@ namespace TestsGeneratorDll
                                         SyntaxFactory.VariableDeclarator(fieldName)))
                                 .AddModifiers(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)));
 
+                            var expr = GetDefault(type.ToString());
+
                             methodDeclaration = methodDeclaration.AddBodyStatements(
                                 SyntaxFactory.ExpressionStatement(
                                     SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                                    SyntaxFactory.IdentifierName(fieldName),
-                                    SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression, SyntaxFactory.Token(SyntaxKind.DefaultKeyword)))));
+                                    SyntaxFactory.IdentifierName(fieldName), expr)));
 
                         }
                         arguments = arguments.Add(argument);
@@ -374,6 +372,25 @@ namespace TestsGeneratorDll
                 classMethods.Add(classDeclaration, methods.ToList());
             }
             return classMethods;
+        }
+
+        public ExpressionSyntax GetDefault(string t)
+        {
+
+            ExpressionSyntax expr = SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression, SyntaxFactory.Token(SyntaxKind.DefaultKeyword)); 
+            if (t.ToLower().EndsWith("?"))
+            {
+                expr = SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression);
+            } else if (t.ToLower().Equals("int") || t.ToLower().Equals("int32") || t.ToLower().Equals("long") || t.ToLower().Equals("byte"))
+            {
+                expr = SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(0));
+            }
+            else if(t.ToLower().Equals("string"))
+            {
+                expr = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(""));
+            }
+
+            return expr;
         }
     }
 }

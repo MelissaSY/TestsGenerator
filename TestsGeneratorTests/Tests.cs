@@ -31,7 +31,6 @@ namespace TestsGeneratorTests
             pipeline = new IOGeneratorPipeline();
             resultDir = "../../GeneratedTests";
         }
-
         [Test]
         public async Task Result_Directory_Contains_Generated_Tests_TestAsync()
         {
@@ -240,6 +239,76 @@ namespace TestsGeneratorTests
                 Assert.That(fields.First().Declaration.Type.ToString(),
                     Is.Not.EqualTo(fields.Last().Declaration.Type.ToString()), "Fields of the same type generated");
 
+            });
+        }
+        [Test]
+        public void No_Private_Method()
+        {
+            string classText =
+           @"public class TestClass
+            {
+                public private TestMethodClass(int number)
+                {     }
+                private string StaticMethodToTest(int number)
+                {
+                    return ""panic!!"";
+                }
+            }";
+
+            TestGenerator generator = new TestGenerator();
+
+            List<TestClass> testClasses = generator.Generate(classText);
+            TestClass staticTestClass = testClasses.First();
+            CompilationUnitSyntax root = CSharpSyntaxTree.ParseText(staticTestClass.Content)
+                 .GetCompilationUnitRoot();
+            var classDeclar = from classes in root.DescendantNodes().OfType<ClassDeclarationSyntax>()
+                              select classes;
+            var @class = classDeclar.First();
+            var methods = from method in @class.DescendantNodes().OfType<MethodDeclarationSyntax>()
+                          select method;
+            Assert.That(methods.Count(), Is.EqualTo(1), "There should be only one declared test method");
+        }
+        [Test]
+        public void Usings_Test()
+        {
+           string usingsTest =
+            @"using System.Windows.Input;
+              namespace TestClassNamespace
+              public class TestClass
+              {
+                 public private TestMethodClass(int number)
+                 {     }
+                 public string StaticMethodToTest(int number)
+                 {
+                     return ""panic!!"";
+                 }
+             }";
+
+            string[] expectedUsings = 
+                { "TestClassNamespace", "System.Windows.Input", "Moq", "NUnit.Framework" };
+
+            TestGenerator generator = new TestGenerator();
+
+            List<TestClass> testClasses = generator.Generate(usingsTest);
+            TestClass staticTestClass = testClasses.First();
+            CompilationUnitSyntax root = CSharpSyntaxTree.ParseText(staticTestClass.Content)
+                 .GetCompilationUnitRoot();
+
+            var usings = from stringUsings in root.Usings
+                         select stringUsings.Name.ToString();
+
+            Assert.That(usings, Is.Not.Null, "There should be using directives");
+            Assert.That(usings.Count(), Is.EqualTo(4), "There should be four using directives");
+            Assert.Multiple(() =>
+            {
+                Assert.That(usings.ElementAt(0), Is.AnyOf(expectedUsings), "Wrong using directive");
+                Assert.That(usings.ElementAt(1), Is.AnyOf(expectedUsings), "Wrong using directive");
+                Assert.That(usings.ElementAt(2), Is.AnyOf(expectedUsings), "Wrong using directive");
+                Assert.That(usings.ElementAt(3), Is.AnyOf(expectedUsings), "Wrong using directive");
+
+                Assert.That(usings.ElementAt(3), Is.Not.AnyOf(usings.ElementAt(0), usings.ElementAt(1), usings.ElementAt(2)), "Duplicated using directive");
+                Assert.That(usings.ElementAt(2), Is.Not.AnyOf(usings.ElementAt(0), usings.ElementAt(1), usings.ElementAt(3)), "Duplicated using directive");
+                Assert.That(usings.ElementAt(1), Is.Not.AnyOf(usings.ElementAt(0), usings.ElementAt(2), usings.ElementAt(3)), "Duplicated using directive");
             });
         }
         

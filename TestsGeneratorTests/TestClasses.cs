@@ -19,7 +19,7 @@ namespace TestsGeneratorTests
 
     public class TestOtherConstructorClass
     {
-        public TestOtherConstructorClass(int i, string s) { }
+        public TestOtherConstructorClass(int i, string? s) { }
 
         public void VoidMethod(int i)
         { }
@@ -40,10 +40,10 @@ namespace TestsGeneratorTests
     {
 
     }
-        
+
     public static class Bar
     {
-        public static string AnotherMethodToTest(int s)
+        public static string AnotherMethodToTest(ICommand s)
         {
             return "aa";
         }
